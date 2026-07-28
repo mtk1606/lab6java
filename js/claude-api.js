@@ -31,6 +31,9 @@ function checkTokenUsage() {
 	})
 	.then(json => {
 		displayStatus(json);
+	})
+	.catch(error => {
+		console.error("Error:", error);
 	});
 }
 
@@ -50,64 +53,43 @@ Tokens Used: ${json.tokens_used}`;
 
 function sendChatMessage() {
 	let userInput = userMessage.value;
-	let url = `${baseURL}/api/claude/messages`;
+
+	if (userInput.trim() === "") {
+		return;
+	}
 
 	conversationHistory = [];
 
 	conversationHistory.push({
-		content: userInput,
-		role: "user"
+		role: "user",
+		content: userInput
 	});
 
-	let requestBody = {
-		max_tokens: 1024,
-		messages: conversationHistory,
-		model: "claude-sonnet-5"
-	};
-
-	fetch(url, {
-		method: "POST",
-		headers: {
-			"X-Student-API-Key": studentApiKey,
-			"Content-Type": "application/json"
-		},
-		body: JSON.stringify(requestBody)
-	})
-	.then(response => {
-		return response.json();
-	})
-	.then(json => {
-		let assistantResponse = json.content[0].text;
-
-		conversationHistory.push({
-			content: assistantResponse,
-			role: "assistant"
-		});
-
-		let para = document.createElement("p");
-		para.textContent = `Assistant: ${assistantResponse}`;
-		results.appendChild(para);
-
-		followUpSection.hidden = false;
-	})
-	.catch(error => {
-		console.error("Error:", error);
-	});
+	sendMessage(conversationHistory, results, false);
 }
 
 function sendFollowUpMessage() {
 	let followUpInput = followUpMessage.value;
-	let url = `${baseURL}/api/claude/messages`;
+
+	if (followUpInput.trim() === "") {
+		return;
+	}
 
 	conversationHistory.push({
-		content: followUpInput,
-		role: "user"
+		role: "user",
+		content: followUpInput
 	});
 
+	sendMessage(conversationHistory, followUpResults, true);
+}
+
+function sendMessage(messages, output, isFollowUp) {
+	let url = `${baseURL}/api/claude/messages`;
+
 	let requestBody = {
-		max_tokens: 1024,
-		messages: conversationHistory,
-		model: "claude-sonnet-5"
+		model: "claude-3-5-sonnet-20241022",
+		max_tokens: maxTokens,
+		messages: messages
 	};
 
 	fetch(url, {
@@ -119,27 +101,38 @@ function sendFollowUpMessage() {
 		body: JSON.stringify(requestBody)
 	})
 	.then(response => {
+		if (!response.ok) {
+			throw new Error("Request failed");
+		}
+
 		return response.json();
 	})
 	.then(json => {
 		let assistantResponse = json.content[0].text;
 
 		conversationHistory.push({
-			content: assistantResponse,
-			role: "assistant"
+			role: "assistant",
+			content: assistantResponse
 		});
 
 		let para = document.createElement("p");
-		para.textContent = `Follow-up Assistant: ${assistantResponse}`;
-		followUpResults.appendChild(para);
 
+		if (isFollowUp) {
+			para.textContent = `Follow-up Assistant: ${assistantResponse}`;
+		} else {
+			para.textContent = `Assistant: ${assistantResponse}`;
+		}
+
+		output.appendChild(para);
+
+		followUpSection.hidden = false;
 		followUpMessage.value = "";
 	})
 	.catch(error => {
 		console.error("Error:", error);
-	});
-}
-	.catch(error => {
-		console.error("Error:", error);
+
+		if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === "user") {
+			conversationHistory.pop();
+		}
 	});
 }

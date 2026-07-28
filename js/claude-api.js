@@ -6,9 +6,11 @@ const userMessage = document.querySelector("#user-message");
 const sendMessageBtn = document.querySelector("#send-message");
 const checkUsageBtn = document.querySelector("#check-usage");
 const results = document.querySelector("#results");
+
 const followUpSection = document.querySelector("#follow-up-section");
 const followUpMessage = document.querySelector("#follow-up-message");
 const sendFollowUpBtn = document.querySelector("#send-follow-up");
+const followUpResults = document.querySelector("#follow-up-results");
 
 let originalUserMessage = "";
 let firstClaudeResponse = "";
@@ -25,7 +27,9 @@ function checkTokenUsage() {
 			"X-Student-API-Key": studentApiKey
 		}
 	})
-	.then(response => response.json())
+	.then(response => {
+		return response.json();
+	})
 	.then(json => {
 		displayStatus(json);
 	});
@@ -33,6 +37,7 @@ function checkTokenUsage() {
 
 function displayStatus(json) {
 	let pre = document.createElement("pre");
+
 	pre.textContent = `IS Enabled ${json.is_enabled}
 last Used at: ${json.last_used_at}
 Student ID: ${json.student_id}
@@ -40,6 +45,7 @@ Student Name: ${json.student_name}
 Tokens Allocated: ${json.tokens_allocated}
 Tokens Remaining: ${json.tokens_remaining}
 Tokens Used: ${json.tokens_used}`;
+
 	results.appendChild(pre);
 }
 
@@ -63,22 +69,24 @@ function sendChatMessage() {
 		},
 		body: JSON.stringify(requestBody)
 	})
-	.then(response => response.json())
+	.then(response => {
+		return response.json();
+	})
 	.then(json => {
+		let assistantResponse = json.content[0].text;
+
 		originalUserMessage = userInput;
-		firstClaudeResponse = json.content[0].text;
-		displayMessage(json);
+		firstClaudeResponse = assistantResponse;
+
+		let para = document.createElement("p");
+		para.textContent = `Assistant: ${assistantResponse}`;
+		results.appendChild(para);
+
 		followUpSection.hidden = false;
 	})
 	.catch(error => {
 		console.error("Error:", error);
 	});
-}
-
-function displayMessage(json) {
-	let para = document.createElement("p");
-	para.textContent = `Assistant: ${json.content[0].text}`;
-	results.appendChild(para);
 }
 
 function sendFollowUpMessage() {
@@ -105,12 +113,15 @@ function sendFollowUpMessage() {
 		},
 		body: JSON.stringify(requestBody)
 	})
-	.then(response => response.json())
+	.then(response => {
+		return response.json();
+	})
 	.then(json => {
+		let assistantResponse = json.content[0].text;
+
 		let para = document.createElement("p");
-		para.classList.add("followUpResponse");
-		para.textContent = `Follow-up Assistant: ${json.content[0].text}`;
-		results.appendChild(para);
+		para.textContent = `Follow-up Assistant: ${assistantResponse}`;
+		followUpResults.appendChild(para);
 	})
 	.catch(error => {
 		console.error("Error:", error);

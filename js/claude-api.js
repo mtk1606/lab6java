@@ -12,8 +12,7 @@ const followUpMessage = document.querySelector("#follow-up-message");
 const sendFollowUpBtn = document.querySelector("#send-follow-up");
 const followUpResults = document.querySelector("#follow-up-results");
 
-let originalUserMessage = "";
-let firstClaudeResponse = "";
+let conversationHistory = [];
 
 sendMessageBtn.addEventListener("click", sendChatMessage);
 checkUsageBtn.addEventListener("click", checkTokenUsage);
@@ -53,11 +52,16 @@ function sendChatMessage() {
 	let userInput = userMessage.value;
 	let url = `${baseURL}/api/claude/messages`;
 
+	conversationHistory = [];
+
+	conversationHistory.push({
+		content: userInput,
+		role: "user"
+	});
+
 	let requestBody = {
 		max_tokens: 1024,
-		messages: [
-			{ content: userInput, role: "user" }
-		],
+		messages: conversationHistory,
 		model: "claude-sonnet-5"
 	};
 
@@ -75,8 +79,10 @@ function sendChatMessage() {
 	.then(json => {
 		let assistantResponse = json.content[0].text;
 
-		originalUserMessage = userInput;
-		firstClaudeResponse = assistantResponse;
+		conversationHistory.push({
+			content: assistantResponse,
+			role: "assistant"
+		});
 
 		let para = document.createElement("p");
 		para.textContent = `Assistant: ${assistantResponse}`;
@@ -93,15 +99,14 @@ function sendFollowUpMessage() {
 	let followUpInput = followUpMessage.value;
 	let url = `${baseURL}/api/claude/messages`;
 
-	let messages = [
-		{ content: originalUserMessage, role: "user" },
-		{ content: firstClaudeResponse, role: "assistant" },
-		{ content: followUpInput, role: "user" }
-	];
+	conversationHistory.push({
+		content: followUpInput,
+		role: "user"
+	});
 
 	let requestBody = {
 		max_tokens: 1024,
-		messages: messages,
+		messages: conversationHistory,
 		model: "claude-sonnet-5"
 	};
 
@@ -119,10 +124,21 @@ function sendFollowUpMessage() {
 	.then(json => {
 		let assistantResponse = json.content[0].text;
 
+		conversationHistory.push({
+			content: assistantResponse,
+			role: "assistant"
+		});
+
 		let para = document.createElement("p");
 		para.textContent = `Follow-up Assistant: ${assistantResponse}`;
 		followUpResults.appendChild(para);
+
+		followUpMessage.value = "";
 	})
+	.catch(error => {
+		console.error("Error:", error);
+	});
+}
 	.catch(error => {
 		console.error("Error:", error);
 	});
